@@ -122,4 +122,5 @@ npm.cmd audit --omit=dev
 
 تغطي الاختبارات الحالية واجهات المصادقة وعضوية المستأجر، التحقق من JWT، منع تسرب token إلى السجلات، التحكم المتزامن ونسخ التحكم القديمة، idempotency للرسائل والموافقات وwebhook، outbox، حدود tenant لـ SSE والمعرفة، وممرات الواجهة الأساسية. راجع [مصفوفة تتبع الميزات](./docs/testing/feature-traceability.md)، و[دليل الاختبارات](./docs/testing/e2e-and-integration.md)، و[تقييمات الوكيل](./docs/testing/ai-evaluations.md) لحدود ما تم التحقق منه. لا تختبر هذه المجموعة تسجيل دخول Auth0 حقيقيًا أو إرسال Telegram حقيقيًا أو جودة استجابات LLM الحقيقية أو تنفيذ إجراء خارجي بعد الموافقة.
 #   A u t o n o m o u s - A I - C o n t a c t - C e n t e r - N e x a D e s k - A I  
+ #   A u t o n o m o u s - A I - C o n t a c t - C e n t e r - N e x a D e s k - A I  
  
