@@ -1,0 +1,201 @@
+name: NexaDesk CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  static-checks:
+    name: Lint, Typecheck & Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Code style and linting
+        run: npm run lint
+
+      - name: Frontend TypeScript typecheck
+        run: npm run typecheck
+
+      - name: API TypeScript typecheck
+        run: npm run typecheck:api
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+  unit-and-evals:
+    name: API Unit Tests & AI Agent Evaluations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run API foundation & unit tests
+        run: npm run test:api
+
+      - name: Run AI Agent Evaluation suite (LLM Evals)
+        run: npm run test:evals
+
+      - name: Upload AI Evaluations Report Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-evaluations-report
+          path: |
+            docs/testing/ai-evaluations.json
+            docs/testing/ai-evaluations.md
+
+  integration-tests:
+    name: PostgreSQL Integration & Business Flows
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: nexadesk
+          POSTGRES_USER: nexadesk
+          POSTGRES_PASSWORD: ci_test_password_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://nexadesk:ci_test_password_only@127.0.0.1:5432/nexadesk
+      DEV_AUTH_ENABLED: "true"
+      DEV_AUTH_TOKEN: "3UIp8DY1B6v8VA68Dn7+eEPOOmLYHafzFHlxWrrW8Ao="
+      DEV_TENANT_ID: "00000000-0000-4000-8000-000000000001"
+      DEV_USER_ID: "00000000-0000-4000-8000-000000000002"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply database migrations
+        run: npm run db:migrate
+
+      - name: Seed local development tenant
+        run: npm run db:seed:dev
+
+      - name: Run PostgreSQL Integration & Business Flow tests
+        run: npm run test:integration
+
+  e2e-playwright:
+    name: Playwright E2E Browser Testing
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: nexadesk
+          POSTGRES_USER: nexadesk
+          POSTGRES_PASSWORD: ci_test_password_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://nexadesk:ci_test_password_only@127.0.0.1:5432/nexadesk
+      DEV_AUTH_ENABLED: "true"
+      DEV_AUTH_TOKEN: "3UIp8DY1B6v8VA68Dn7+eEPOOmLYHafzFHlxWrrW8Ao="
+      DEV_TENANT_ID: "00000000-0000-4000-8000-000000000001"
+      DEV_USER_ID: "00000000-0000-4000-8000-000000000002"
+      VITE_APP_MODE: api
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Apply database migrations
+        run: npm run db:migrate
+
+      - name: Seed development tenant
+        run: npm run db:seed:dev
+
+      - name: Run Playwright E2E browser test
+        run: npm run test:e2e
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-artifacts
+          path: test-results/
+
+  build-and-docker:
+    name: Production Build & Docker Image Packaging
+    needs: [static-checks, unit-and-evals, integration-tests, e2e-playwright]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production assets (Vite & API types)
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: nexadesk-api:ci

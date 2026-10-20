@@ -1,0 +1,52 @@
+{
+  "name": "nexadesk-ai",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "tsx watch apps/api/src/server.ts",
+    "start:api": "tsx apps/api/src/server.ts",
+    "build": "npm run typecheck && vite build && npm run typecheck:api",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --pretty",
+    "typecheck:api": "tsc -p apps/api/tsconfig.json --noEmit",
+    "db:migrate": "tsx apps/api/src/migrate.ts",
+    "db:seed:dev": "tsx apps/api/src/seed-dev.ts",
+    "test:api": "tsx --test apps/api/test/app.test.ts apps/api/test/openai-agent-provider.test.ts apps/api/test/telegram-adapter.test.ts",
+    "test:integration": "tsx --test apps/api/test/integration.test.ts apps/api/test/business-flows.test.ts",
+    "test:evals": "tsx apps/api/test/run-evals.ts",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:api && npm run test:integration && npm run test:evals && npm run test:e2e",
+    "lint": "eslint src apps/api shared tests playwright.config.ts vite.config.ts eslint.config.js"
+  },
+  "dependencies": {
+    "@auth0/auth0-react": "^2.28.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "jose": "^6.2.13",
+    "lucide-react": "^0.468.0",
+    "pg": "^8.23.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^6.0.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/supertest": "^7.2.1",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.72.0"
+  }
+}
